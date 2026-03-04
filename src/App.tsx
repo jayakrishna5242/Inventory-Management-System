@@ -13,7 +13,11 @@ import {
   ArrowDownRight,
   History,
   FileText,
-  X
+  X,
+  User,
+  Settings,
+  LogOut,
+  ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -45,6 +49,12 @@ interface Sale {
   sale_date: string;
 }
 
+interface UserProfile {
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
 interface Stats {
   totalProducts: number;
   lowStock: number;
@@ -64,16 +74,23 @@ export default function App() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeModal, setActiveModal] = useState<"profile" | "settings" | null>(null);
+  const [user, setUser] = useState<UserProfile>({
+    name: "John Doe",
+    email: "john.doe@inventorypro.com"
+  });
 
   // Initialize data from localStorage
   useEffect(() => {
     const storedProducts = localStorage.getItem("inventory_products");
     const storedPurchases = localStorage.getItem("inventory_purchases");
     const storedSales = localStorage.getItem("inventory_sales");
+    const storedUser = localStorage.getItem("inventory_user");
 
     if (storedProducts) setProducts(JSON.parse(storedProducts));
     if (storedPurchases) setPurchases(JSON.parse(storedPurchases));
     if (storedSales) setSales(JSON.parse(storedSales));
+    if (storedUser) setUser(JSON.parse(storedUser));
     
     setLoading(false);
   }, []);
@@ -84,6 +101,7 @@ export default function App() {
       localStorage.setItem("inventory_products", JSON.stringify(products));
       localStorage.setItem("inventory_purchases", JSON.stringify(purchases));
       localStorage.setItem("inventory_sales", JSON.stringify(sales));
+      localStorage.setItem("inventory_user", JSON.stringify(user));
 
       const totalRevenue = sales.reduce((acc, s) => acc + (s.quantity * s.selling_price), 0);
       const totalPurchases = purchases.reduce((acc, p) => acc + (p.quantity * p.purchase_price), 0);
@@ -250,9 +268,11 @@ export default function App() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-              JD
-            </div>
+            <ProfileSection 
+              user={user} 
+              onOpenProfile={() => setActiveModal("profile")} 
+              onOpenSettings={() => setActiveModal("settings")} 
+            />
           </div>
         </header>
 
@@ -276,7 +296,7 @@ export default function App() {
               )}
               {currentView === "purchases" && <PurchasesView products={products} purchases={filteredPurchases} onRecord={handleRecordPurchase} />}
               {currentView === "sales" && <SalesView products={products} sales={filteredSales} onRecord={handleRecordSale} />}
-              {currentView === "reports" && <ReportsView stats={stats} />}
+              {currentView === "reports" && <ReportsView stats={stats} products={products} purchases={purchases} sales={sales} />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -326,6 +346,175 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {activeModal === "profile" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">My Profile</h3>
+                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <X size={20} className="text-gray-400" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex flex-col items-center mb-6">
+                  <div className="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center text-white text-2xl font-bold mb-2 shadow-lg">
+                    {user.name.split(" ").map(n => n[0]).join("")}
+                  </div>
+                  <p className="text-sm font-bold text-gray-900">{user.name}</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                  <input 
+                    type="text" 
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                    value={user.name}
+                    onChange={(e) => setUser({...user, name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                  <input 
+                    type="email" 
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm"
+                    value={user.email}
+                    onChange={(e) => setUser({...user, email: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-full mt-8 px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+              >
+                Save Changes
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {activeModal === "settings" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Account Settings</h3>
+                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <X size={20} className="text-gray-400" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Email Notifications</p>
+                    <p className="text-xs text-gray-500">Receive alerts for low stock</p>
+                  </div>
+                  <div className="w-10 h-6 bg-indigo-600 rounded-full relative cursor-pointer">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                  </div>
+                </div>
+
+                <div className="p-4 border border-red-100 rounded-2xl bg-red-50/30">
+                  <p className="text-sm font-bold text-red-600 mb-1">Danger Zone</p>
+                  <p className="text-xs text-gray-500 mb-3">Clear all system data permanently</p>
+                  <button 
+                    onClick={() => {
+                      if(confirm("Are you absolutely sure? This will delete all products, purchases, and sales.")) {
+                        localStorage.clear();
+                        window.location.reload();
+                      }
+                    }}
+                    className="text-xs font-bold text-red-600 hover:underline"
+                  >
+                    Reset System Data
+                  </button>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-full mt-8 px-6 py-3 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ProfileSection({ user, onOpenProfile, onOpenSettings }: { user: UserProfile, onOpenProfile: () => void, onOpenSettings: () => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 p-1 pr-2 hover:bg-gray-100 rounded-full transition-all"
+      >
+        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md shadow-indigo-200">
+          {user.name.split(" ").map(n => n[0]).join("")}
+        </div>
+        <ChevronDown size={14} className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div 
+              className="fixed inset-0 z-20" 
+              onClick={() => setIsOpen(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 z-30 overflow-hidden"
+            >
+              <div className="p-4 border-b border-gray-50 bg-gray-50/50">
+                <p className="text-sm font-bold text-gray-900">{user.name}</p>
+                <p className="text-xs text-gray-500">{user.email}</p>
+              </div>
+              
+              <div className="p-2">
+                <button 
+                  onClick={() => { onOpenProfile(); setIsOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <User size={16} />
+                  My Profile
+                </button>
+                <button 
+                  onClick={() => { onOpenSettings(); setIsOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Settings size={16} />
+                  Account Settings
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
@@ -863,14 +1052,50 @@ function SalesView({ products, sales, onRecord }: { products: Product[], sales: 
   );
 }
 
-function ReportsView({ stats }: { stats: Stats | null }) {
+function ReportsView({ stats, products, purchases, sales }: { stats: Stats | null, products: Product[], purchases: Purchase[], sales: Sale[] }) {
   if (!stats) return null;
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Summary Section
+    csvContent += "FINANCIAL SUMMARY\n";
+    csvContent += `Gross Revenue,$${stats.totalRevenue}\n`;
+    csvContent += `Total Expenses,$${stats.totalPurchases}\n`;
+    csvContent += `Net Profit,$${stats.profit}\n\n`;
+
+    // Products Section
+    csvContent += "PRODUCT INVENTORY\n";
+    csvContent += "ID,Name,Category,Price,Quantity,Reorder Level\n";
+    products.forEach(p => {
+      csvContent += `${p.id},"${p.name}","${p.category}",${p.price},${p.quantity},${p.reorder_level}\n`;
+    });
+    csvContent += "\n";
+
+    // Sales Section
+    csvContent += "SALES HISTORY\n";
+    csvContent += "Date,Product,Quantity,Price,Total\n";
+    sales.forEach(s => {
+      csvContent += `${new Date(s.sale_date).toLocaleDateString()},"${s.product_name}",${s.quantity},${s.selling_price},${s.quantity * s.selling_price}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `inventory_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Financial Reports</h2>
-        <button className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold">
+        <button 
+          onClick={handleExportCSV}
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold hover:bg-gray-800 transition-colors"
+        >
           <ArrowDownRight size={18} /> Export CSV
         </button>
       </div>
